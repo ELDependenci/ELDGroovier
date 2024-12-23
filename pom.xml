@@ -18,6 +18,7 @@
     </modules>
 
     <properties>
+        <eld.version>2.0.51-SNAPSHOT</eld.version>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -196,7 +197,7 @@
         </repository>
         <repository>
             <id>github</id>
-            <url>https://maven.pkg.github.com/ELDependenci/eldependenci</url>
+            <url>https://maven.pkg.github.com/ELDependenci/ELDependenci</url>
         </repository>
     </repositories>
 
@@ -243,7 +244,19 @@
             <dependency>
                 <groupId>org.eldependenci</groupId>
                 <artifactId>eldependenci-bukkit</artifactId>
-                <version>2.0.51-SNAPSHOT</version>
+                <version>${eld.version}</version>
+                <scope>provided</scope>
+                <exclusions>
+                    <exclusion>
+                        <groupId>javax.inject</groupId>
+                        <artifactId>javax.inject</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>org.eldependenci</groupId>
+                <artifactId>eldependenci-bungee</artifactId>
+                <version>${eld.version}</version>
                 <scope>provided</scope>
                 <exclusions>
                     <exclusion>
@@ -255,7 +268,7 @@
             <dependency>
                 <groupId>org.eldependenci</groupId>
                 <artifactId>eldependenci-addon</artifactId>
-                <version>2.0.51-SNAPSHOT</version>
+                <version>${eld.version}</version>
                 <scope>provided</scope>
             </dependency>
             <dependency>

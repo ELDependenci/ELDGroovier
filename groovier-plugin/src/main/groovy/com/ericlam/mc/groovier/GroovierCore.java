@@ -1,20 +1,10 @@
 package com.ericlam.mc.groovier;
 
-import com.ericlam.mc.groovier.providers.ArgumentParserProvider;
-import com.ericlam.mc.groovier.providers.GroovierLifeCycleProvider;
-import com.ericlam.mc.groovier.providers.ServiceInjectorProvider;
-import com.ericlam.mc.groovier.scriptloaders.*;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.Module;
-import org.jetbrains.annotations.NotNull;
-
-import javax.inject.Provider;
-import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.io.File;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collections;
@@ -22,95 +12,112 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 
+import javax.inject.Provider;
+
+import org.jetbrains.annotations.NotNull;
+
+import com.ericlam.mc.eld.AddonInstallation;
+import com.ericlam.mc.groovier.providers.ArgumentParserProvider;
+import com.ericlam.mc.groovier.providers.GroovierLifeCycleProvider;
+import com.ericlam.mc.groovier.providers.ServiceInjectorProvider;
+import com.ericlam.mc.groovier.scriptloaders.ArgumentScriptManager;
+import com.ericlam.mc.groovier.scriptloaders.CommandScriptsManager;
+import com.ericlam.mc.groovier.scriptloaders.EventScriptsManager;
+import com.ericlam.mc.groovier.scriptloaders.GroovierLifeCycle;
+import com.ericlam.mc.groovier.scriptloaders.LifeCycleScriptsManager;
+import com.ericlam.mc.groovier.scriptloaders.ServiceScriptsManager;
+import com.google.inject.Injector;
+import com.google.inject.Module;
+
 public class GroovierCore implements GroovierAPI, GroovierAddon {
 
-    private final GroovierModule groovierModule = new GroovierModule();
+	private final GroovierModule groovierModule = new GroovierModule();
 
-    private static GroovierAPI api;
+	private static GroovierAPI api;
 
-    public GroovierCore() {
-        api = this;
+	public GroovierCore() {
+		api = this;
+		this.bindInstance(GroovierAPI.class, this);
+		this.addScriptLoader(ServiceScriptsManager.class);
+		this.addScriptLoader(CommandScriptsManager.class);
+		this.addScriptLoader(EventScriptsManager.class);
+		this.addScriptLoader(ArgumentScriptManager.class);
+		this.addScriptLoader(LifeCycleScriptsManager.class);
+		this.bindProvider(ArgumentParser.class, ArgumentParserProvider.class);
+		this.bindProvider(ServiceInjector.class, ServiceInjectorProvider.class);
+		this.bindProvider(GroovierLifeCycle.class, GroovierLifeCycleProvider.class);
+	}
 
-        this.bindInstance(GroovierAPI.class, this);
-        this.addScriptLoader(ServiceScriptsManager.class);
-        this.addScriptLoader(CommandScriptsManager.class);
-        this.addScriptLoader(EventScriptsManager.class);
-        this.addScriptLoader(ArgumentScriptManager.class);
-        this.addScriptLoader(LifeCycleScriptsManager.class);
-        this.bindProvider(ArgumentParser.class, ArgumentParserProvider.class);
-        this.bindProvider(ServiceInjector.class, ServiceInjectorProvider.class);
-        this.bindProvider(GroovierLifeCycle.class, GroovierLifeCycleProvider.class);
-    }
-
-    public static GroovierAPI getApi() {
-        return Optional.ofNullable(api).orElseThrow(() -> new IllegalStateException("groovier not initialized"));
-    }
+	public static GroovierAPI getApi() {
+		return Optional.ofNullable(api).orElseThrow(() -> new IllegalStateException("groovier not initialized"));
+	}
 
     private Injector injector;
     private GroovierScriptLoader loader;
     private ScriptPlugin plugin;
 
-    private GroovierLifeCycle lifeCycle;
+	private GroovierLifeCycle lifeCycle;
 
 
-    public void onLoad(ScriptPlugin plugin) {
+	public void onLoad(ScriptPlugin plugin, AddonInstallation installation) {
         this.plugin = plugin;
         groovierModule.bindScriptPlugin(plugin);
-        plugin.copyResources();
-    }
+		installation.installModule(this.groovierModule);
+		plugin.copyResources();
+	}
 
 
-    public void onEnable() {
-        injector = Guice.createInjector(groovierModule);
-        loader = injector.getInstance(GroovierScriptLoader.class);
-        loader.addClassPath();
-        loader.loadAllScripts().whenComplete((v, e) -> {
-            if (e != null) {
-                plugin.getLogger().log(Level.SEVERE, e, () -> "error while loading scripts: " + e.getMessage());
-            }
-            lifeCycle = injector.getInstance(GroovierLifeCycle.class);
-            plugin.runSyncTask(() -> lifeCycle.onEnable());
-        });
-    }
+	public void onEnable(Injector injector) {
+		this.injector = injector;
+		this.loader = injector.getInstance(GroovierScriptLoader.class);
+		this.loader.addClassPath();
+		this.loader.loadAllScripts().whenComplete((v, e) -> {
+			if (e != null) {
+				plugin.getLogger().log(Level.SEVERE, e, () -> "error while loading scripts: " + e.getMessage());
+			}
+			lifeCycle = injector.getInstance(GroovierLifeCycle.class);
+			plugin.runSyncTask(() -> lifeCycle.onEnable());
+		});
+	}
 
-    public void onDisable() {
-        lifeCycle.onDisable();
-        loader.unloadAllScripts();
-    }
+	public void onDisable() {
+		lifeCycle.onDisable();
+		loader.unloadAllScripts();
+	}
 
-    public CompletableFuture<Void> reloadAllScripts() {
-        return loader.reloadAllScripts();
-    }
+	public CompletableFuture<Void> reloadAllScripts() {
+		return loader.reloadAllScripts();
+	}
 
-    @Override
-    public void addScriptLoader(Class<? extends ScriptLoader> scriptLoader) {
-        this.groovierModule.addReloadable(scriptLoader);
-    }
+	@Override
+	public void addScriptLoader(Class<? extends ScriptLoader> scriptLoader) {
+		this.groovierModule.addReloadable(scriptLoader);
+	}
 
-    @Override
-    public <T extends ScriptValidator> void bindRegisters(Class<T> validator, T ins) {
-        this.groovierModule.bindRegisters(validator, ins);
-    }
+	@Override
+	public <T extends ScriptValidator> void bindRegisters(Class<T> validator, T ins) {
+		this.groovierModule.bindRegisters(validator, ins);
+	}
 
-    @Override
-    public <T> void bindInstance(Class<T> type, T ins) {
-        this.groovierModule.bindInstance(type, ins);
-    }
+	@Override
+	public <T> void bindInstance(Class<T> type, T ins) {
+		this.groovierModule.bindInstance(type, ins);
+	}
 
-    @Override
-    public <T, V extends T> void bindType(Class<T> type, Class<V> clazz) {
-        this.groovierModule.bindType(type, clazz);
-    }
+	@Override
+	public <T, V extends T> void bindType(Class<T> type, Class<V> clazz) {
+		this.groovierModule.bindType(type, clazz);
+	}
 
-    @Override
-    public <T, P extends Provider<T>> void bindProvider(Class<T> type, Class<P> clazz) {
-        this.groovierModule.bindProvider(type, clazz);
-    }
+	@Override
+	public <T, P extends Provider<T>> void bindProvider(Class<T> type, Class<P> clazz) {
+		this.groovierModule.bindProvider(type, clazz);
+	}
 
-    @Override
-    public void installModule(Module module) {
-        this.groovierModule.installModule(module);
-    }
+	@Override
+	public void installModule(Module module) {
+		this.groovierModule.installModule(module);
+	}
 
     @Override
     public void extractFromJar(Class<?> jar, String sourceFolder, String targetFolder) throws URISyntaxException, IOException {
@@ -119,28 +126,28 @@ public class GroovierCore implements GroovierAPI, GroovierAddon {
 
         URL url = jar.getResource("");
 
-        if (url == null) {
-            throw new IllegalStateException("can't find resource inside jar");
-        }
+		if (url == null) {
+			throw new IllegalStateException("can't find resource inside jar");
+		}
 
-        URI resource = url.toURI();
+		URI resource = url.toURI();
 
-        try (FileSystem fileSystem = FileSystems.newFileSystem(
-                resource,
-                Collections.<String, String>emptyMap()
-        )) {
+		try (FileSystem fileSystem = FileSystems.newFileSystem(
+				resource,
+				Collections.<String, String>emptyMap()
+		)) {
 
             final Path target = new File(plugin.getPluginFolder(), targetFolder).toPath();
             final Path jarPath = fileSystem.getPath(sourceFolder);
 
-            Files.walkFileTree(jarPath, new SimpleFileVisitor<>() {
+			Files.walkFileTree(jarPath, new SimpleFileVisitor<>() {
 
-                @Override
-                public @NotNull FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-                    Path currentTarget = target.resolve(jarPath.relativize(dir).toString());
-                    if (Files.notExists(currentTarget)) Files.createDirectories(currentTarget);
-                    return FileVisitResult.CONTINUE;
-                }
+				@Override
+				public @NotNull FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+					Path currentTarget = target.resolve(jarPath.relativize(dir).toString());
+					if (Files.notExists(currentTarget)) Files.createDirectories(currentTarget);
+					return FileVisitResult.CONTINUE;
+				}
 
                 @Override
                 public @NotNull FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
@@ -149,7 +156,7 @@ public class GroovierCore implements GroovierAPI, GroovierAddon {
                     return FileVisitResult.CONTINUE;
                 }
 
-            });
+			});
 
         }
     }

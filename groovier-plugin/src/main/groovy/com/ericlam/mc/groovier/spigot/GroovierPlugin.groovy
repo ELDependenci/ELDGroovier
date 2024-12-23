@@ -1,5 +1,6 @@
 package com.ericlam.mc.groovier.spigot
 
+import com.ericlam.mc.eld.*
 import com.ericlam.mc.groovier.GroovierCore
 import com.ericlam.mc.groovier.ScriptLoadingException
 import com.ericlam.mc.groovier.ScriptPlugin
@@ -11,26 +12,22 @@ import org.bukkit.command.CommandSender
 import org.bukkit.plugin.java.JavaPlugin
 import org.jetbrains.annotations.NotNull
 
-class GroovierPlugin extends JavaPlugin implements ScriptPlugin {
+@ELDBukkit(lifeCycle = SpigotLifeCycle.class)
+class GroovierPlugin extends ELDBukkitPlugin implements ScriptPlugin {
 
     private final GroovierCore core = new GroovierCore()
 
     @Override
-    void onLoad() {
+    void bindServices(ServiceCollection serviceCollection) {
+        var installation = serviceCollection.getInstallation(AddonInstallation.class)
         core.bindInstance(JavaPlugin.class, this)
         core.bindRegisters(CommandRegister.class, new SpigotCommandRegister(this))
         core.bindRegisters(EventRegister.class, new SpigotEventRegister(this))
-        core.onLoad(this)
+        core.onLoad(this, installation)
     }
 
     @Override
-    void onEnable() {
-        core.onEnable()
-    }
-
-    @Override
-    void onDisable() {
-        core.onDisable()
+    protected void manageProvider(BukkitManagerProvider bukkitManagerProvider) {
     }
 
     @Override
@@ -93,7 +90,7 @@ class GroovierPlugin extends JavaPlugin implements ScriptPlugin {
                 }
                 return true
             case "version":
-                sender.sendMessage("Groovier v${getDescription().getVersion()} by ${getDescription().getAuthors().join(", ")}")
+                sender.sendMessage("Groovier v${getDescription().getVersion()} by ${getDescription().getAuthors().join(", ")} [ELD Edited]")
                 return true
             default:
                 sender.sendMessage("Usage: /groovier reload | version")
