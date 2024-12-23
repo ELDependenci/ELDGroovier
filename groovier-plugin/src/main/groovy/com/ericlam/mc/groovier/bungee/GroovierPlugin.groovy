@@ -1,76 +1,24 @@
 package com.ericlam.mc.groovier.bungee
 
+import com.ericlam.mc.eld.*
 import com.ericlam.mc.groovier.GroovierCore
-import com.ericlam.mc.groovier.ScriptLoadingException
 import com.ericlam.mc.groovier.ScriptPlugin
 import com.ericlam.mc.groovier.scriptloaders.CommandRegister
 import com.ericlam.mc.groovier.scriptloaders.EventRegister
-import net.md_5.bungee.api.ChatColor
-import net.md_5.bungee.api.CommandSender
-import net.md_5.bungee.api.chat.TextComponent
-import net.md_5.bungee.api.plugin.Command
 import net.md_5.bungee.api.plugin.Plugin
 import net.md_5.bungee.config.ConfigurationProvider
 import net.md_5.bungee.config.YamlConfiguration
 
 import java.nio.file.Files
 
-class GroovierPlugin extends Plugin implements ScriptPlugin {
+@ELDBungee(lifeCycle = BungeeLifeCycle.class)
+class GroovierPlugin extends ELDBungeePlugin implements ScriptPlugin {
 
     private final GroovierCore core = new GroovierCore()
 
     @Override
-    void onLoad() {
-        core.bindInstance(Plugin.class, this)
-        core.bindRegisters(CommandRegister.class, new BungeeCommandRegister(this))
-        core.bindRegisters(EventRegister.class, new BungeeEventRegister(this))
-        core.onLoad(this)
-    }
+    protected void manageProvider(BungeeManageProvider bungeeManageProvider) {
 
-    @Override
-    void onEnable() {
-        core.onEnable()
-
-        var groovierCommand = new Command("groovier", "groovier.use") {
-            @Override
-            void execute(CommandSender sender, String[] args) {
-                if (hasPermission(sender)) {
-                    sender.sendMessage(TextComponent.fromLegacy("${ChatColor.RED}no permission."))
-                }
-                if (args.length == 0) {
-                    sender.sendMessage(TextComponent.fromLegacy("Usage: /groovier reload | version"))
-                    return
-                }
-                if (args[0].equalsIgnoreCase("reload")) {
-                    core.reloadAllScripts().whenComplete((v, ex) -> {
-                        if (ex != null) {
-                            if (ex instanceof ScriptLoadingException) {
-                                sender.sendMessage(TextComponent.fromLegacy("${ChatColor.GOLD}Script is still loading, please wait until complete."))
-                            } else {
-                                sender.sendMessage(TextComponent.fromLegacy("${ChatColor.RED}Failed to reload scripts: " + ex.getMessage()))
-                                ex.printStackTrace()
-                            }
-                        } else {
-                            sender.sendMessage(TextComponent.fromLegacy("${ChatColor.GREEN}Successfully reloaded scripts"))
-                        }
-                    })
-
-                    return
-                }
-                if (args[0].equalsIgnoreCase("version")) {
-                    sender.sendMessage(TextComponent.fromLegacy("Groovier v${getDescription().getVersion()} by ${getDescription().getAuthor()}"))
-                    return
-                }
-                sender.sendMessage(TextComponent.fromLegacy("Usage: /groovier reload | version"))
-            }
-        }
-
-        proxy.pluginManager.registerCommand(this, groovierCommand)
-    }
-
-    @Override
-    void onDisable() {
-        core.onDisable()
     }
 
     @Override
@@ -110,5 +58,14 @@ class GroovierPlugin extends Plugin implements ScriptPlugin {
     @Override
     void runAsyncTask(Runnable runnable) {
         proxy.scheduler.runAsync(this, runnable)
+    }
+
+    @Override
+    void bindServices(ServiceCollection serviceCollection) {
+        var installation = serviceCollection.getInstallation(AddonInstallation.class)
+        core.bindInstance(Plugin.class, this)
+        core.bindRegisters(CommandRegister.class, new BungeeCommandRegister(this))
+        core.bindRegisters(EventRegister.class, new BungeeEventRegister(this))
+        core.onLoad(this, installation)
     }
 }

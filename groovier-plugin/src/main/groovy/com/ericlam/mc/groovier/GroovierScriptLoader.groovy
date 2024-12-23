@@ -51,7 +51,7 @@ class GroovierScriptLoader implements ScriptManager {
                     loader.afterLoad()
                     plugin.logger.info("${loader.class.simpleName} initializing completed.")
                 }
-                ((GroovierCacheManager)cacheManager).flush()
+                ((GroovierCacheManager) cacheManager).flush()
                 plugin.logger.info("All Scripts loaded.")
                 plugin.runSyncTask {
                     lifeCycle.onScriptLoad()

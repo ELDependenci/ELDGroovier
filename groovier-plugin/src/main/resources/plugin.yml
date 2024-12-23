@@ -1,10 +1,11 @@
 name: Groovier
-description: "A Scripts Engine based on Groovy"
+description: "A Scripts Engine based on Groovy [ELD Edited]"
 author: "Eric Lam"
 website: "https://github.com/eric2788"
 version: ${project.version}
 api-version: "1.21"
 main: com.ericlam.mc.groovier.spigot.GroovierPlugin
+depend: [ELDependenci]
 commands:
   groovier:
     usage: /groovier reload|version
