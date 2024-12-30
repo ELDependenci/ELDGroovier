@@ -77,7 +77,7 @@ class GroovierScriptLoader {
             return CompletableFuture.failedFuture(new ScriptLoadingException())
         }
         this.unloadAllScripts()
-        return this.loadAllScripts().whenComplete { reloading.set(false) }
+        return this.loadAllScripts().thenRun { reloading.set(false) }
     }
 
 }
