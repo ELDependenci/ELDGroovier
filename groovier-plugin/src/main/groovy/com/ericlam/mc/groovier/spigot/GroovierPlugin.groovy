@@ -25,12 +25,12 @@ class GroovierPlugin extends JavaPlugin implements ScriptPlugin {
 
     @Override
     void onEnable() {
-        core.onEnable(this)
+        core.onEnable()
     }
 
     @Override
     void onDisable() {
-        core.onDisable(this)
+        core.onDisable()
     }
 
     @Override
@@ -39,13 +39,16 @@ class GroovierPlugin extends JavaPlugin implements ScriptPlugin {
     }
 
     @Override
-    void copyResources() {
+    boolean isCopyDefaults() {
         saveDefaultConfig()
-        var copyDefault = config.getBoolean("CopyDefaults")
-        if (!copyDefault) return
+        return config.getBoolean("CopyDefaults")
+    }
+
+    @Override
+    void copyResources() {
         try {
-            core.copyFromJar("spigot", getPluginFolder().toPath())
-            core.copyFromJar("common", getPluginFolder().toPath())
+            core.copyFromJar("spigot")
+            core.copyFromJar("common")
         } catch (URISyntaxException | IOException e) {
             getLogger().warning("Failed to copy resources: " + e.getMessage())
             e.printStackTrace()
@@ -74,10 +77,10 @@ class GroovierPlugin extends JavaPlugin implements ScriptPlugin {
             return true
         }
         var cmd = args[0].toLowerCase()
-        switch (cmd){
+        switch (cmd) {
             case "reload":
-                core.reloadAllScripts().whenComplete{v, ex ->
-                    if (ex != null){
+                core.reloadAllScripts().whenComplete { v, ex ->
+                    if (ex != null) {
                         if (ex instanceof ScriptLoadingException) {
                             sender.sendMessage("${ChatColor.GOLD}Script is still loading, please wait until complete.")
                         } else {

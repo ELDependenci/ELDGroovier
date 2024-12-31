@@ -10,6 +10,8 @@ public interface ScriptPlugin {
 
     File getPluginFolder();
 
+    boolean isCopyDefaults();
+
     void copyResources();
 
     Logger getLogger();

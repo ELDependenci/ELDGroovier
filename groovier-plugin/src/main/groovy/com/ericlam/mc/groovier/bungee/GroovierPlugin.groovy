@@ -29,7 +29,7 @@ class GroovierPlugin extends Plugin implements ScriptPlugin {
 
     @Override
     void onEnable() {
-        core.onEnable(this)
+        core.onEnable()
 
         var groovierCommand = new Command("groovier", "groovier.use") {
             @Override
@@ -70,7 +70,7 @@ class GroovierPlugin extends Plugin implements ScriptPlugin {
 
     @Override
     void onDisable() {
-        core.onDisable(this)
+        core.onDisable()
     }
 
     @Override
@@ -79,7 +79,7 @@ class GroovierPlugin extends Plugin implements ScriptPlugin {
     }
 
     @Override
-    void copyResources() {
+    boolean isCopyDefaults() {
         if (!getPluginFolder().exists()) getPluginFolder().mkdirs()
         YamlConfiguration yamlConfiguration = ConfigurationProvider.getProvider(YamlConfiguration.class) as YamlConfiguration
         File configFile = new File(getPluginFolder(), "config.yml")
@@ -88,11 +88,14 @@ class GroovierPlugin extends Plugin implements ScriptPlugin {
             Files.copy(stream, configFile.toPath())
         }
         var config = yamlConfiguration.load(configFile)
-        var copyDefault = config.getBoolean("CopyDefaults")
-        if (!copyDefault) return
+        return config.getBoolean("CopyDefaults")
+    }
+
+    @Override
+    void copyResources() {
         try {
-            core.copyFromJar("bungee", getPluginFolder().toPath())
-            core.copyFromJar("common", getPluginFolder().toPath())
+            core.copyFromJar("bungee")
+            core.copyFromJar("common")
         } catch (URISyntaxException | IOException e) {
             getLogger().warning("Failed to copy resources: " + e.getMessage())
             e.printStackTrace()
