@@ -197,7 +197,7 @@
         </repository>
         <repository>
             <id>github</id>
-            <url>https://maven.pkg.github.com/ELDependenci/ELDependenci</url>
+            <url>https://maven.pkg.github.com/ELDependenci/eldependenci</url>
         </repository>
     </repositories>
 
