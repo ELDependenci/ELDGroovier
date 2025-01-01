@@ -83,7 +83,7 @@ class ArgumentScriptManager implements ScriptLoader, ArgumentParser, ScriptValid
         if (parser == null) {
             try {
                 return (T) arg.asType(literal.rawType)
-            }catch(Exception e){
+            }catch(Exception ignored){
                 throw new ArgumentParseException("your input '${arg}' is not appliable to type ${literal.rawType.simpleName}!")
             }
         }
